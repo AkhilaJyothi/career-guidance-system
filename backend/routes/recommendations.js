@@ -1,104 +1,109 @@
 const express = require("express");
 const router = express.Router();
 
-// Sample data to match interests and skills with careers
-const careerData = [
-  {
-    interests: ["technology", "programming", "AI"],
-    skills: ["JavaScript", "Python", "Machine Learning"],
-    careers: ["Software Engineer", "AI Developer", "Data Scientist"],
+// Define career paths with relevant certifications and courses
+const recommendationsData = {
+  "Software Developer": {
+    skills: ["Java", "Python", "React", "Node.js"],
+    certifications: ["Full Stack Developer", "Web Development", "Backend Developer"],
+    workExperience: ["intern", "developer", "software"],
+    recommendedCertifications: ["Advanced React", "MERN Stack Masterclass", "Backend Development"],
   },
-  {
-    interests: ["design", "art", "creativity"],
-    skills: ["Photoshop", "Illustrator", "UI/UX"],
-    careers: ["Graphic Designer", "UI/UX Designer", "Animator"],
+  "Data Scientist": {
+    skills: ["Python", "Machine Learning", "Data Analysis"],
+    certifications: ["Data Science", "AI", "ML"],
+    workExperience: ["data analysis", "research", "AI"],
+    recommendedCertifications: ["TensorFlow Advanced", "Data Visualization with Python", "AI Ethics"],
   },
-  {
-    interests: ["business", "management", "finance"],
-    skills: ["Accounting", "Leadership", "Excel"],
-    careers: ["Financial Analyst", "Project Manager", "Business Analyst"],
+  "Cybersecurity Analyst": {
+    skills: ["Network Security", "Ethical Hacking", "Cryptography"],
+    certifications: ["Cybersecurity", "Ethical Hacking"],
+    workExperience: ["security", "analysis", "network"],
+    recommendedCertifications: ["Certified Ethical Hacker (CEH)", "CompTIA Security+"],
   },
-  {
-    interests: ["healthcare", "medicine", "biology"],
-    skills: ["Research", "Lab Techniques", "Diagnosis"],
-    careers: ["Doctor", "Biotechnologist", "Medical Researcher"],
+  "UI/UX Designer": {
+    skills: ["Figma", "UI Design", "Adobe XD"],
+    certifications: ["UI/UX Design"],
+    workExperience: ["design", "user experience", "UI/UX"],
+    recommendedCertifications: ["UX Research Masterclass", "Figma Advanced Design"],
   },
-  {
-    interests: ["writing", "communication", "journalism"],
-    skills: ["Writing", "Editing", "Research"],
-    careers: ["Content Writer", "Journalist", "Technical Writer"],
+  "Cloud Engineer": {
+    skills: ["AWS", "Azure", "Cloud Architecture"],
+    certifications: ["Cloud Computing", "AWS Certified"],
+    workExperience: ["cloud", "deployment", "infrastructure"],
+    recommendedCertifications: ["AWS Solutions Architect", "Google Cloud Professional"],
   },
-  {
-    interests: ["education", "teaching", "mentoring"],
-    skills: ["Communication", "Lesson Planning", "Public Speaking"],
-    careers: ["Teacher", "Educational Consultant", "Trainer"],
-  },
-  {
-    interests: ["environment", "sustainability", "research"],
-    skills: ["Data Analysis", "Field Work", "GIS"],
-    careers: ["Environmental Scientist", "Research Analyst", "Conservationist"],
-  },
-  {
-    interests: ["cybersecurity", "networking", "IT"],
-    skills: ["Ethical Hacking", "Network Security", "Penetration Testing"],
-    careers: ["Cybersecurity Analyst", "Network Engineer", "Penetration Tester"],
-  },
-  {
-    interests: ["marketing", "advertising", "sales"],
-    skills: ["SEO", "Digital Marketing", "Social Media"],
-    careers: ["Digital Marketer", "Sales Manager", "Brand Strategist"],
-  },
-  {
-    interests: ["law", "justice", "advocacy"],
-    skills: ["Legal Research", "Debate", "Critical Thinking"],
-    careers: ["Lawyer", "Paralegal", "Legal Advisor"],
-  },
-];
-
-// Helper function to match careers
-const getRecommendations = (interests, skills) => {
-  let matchedCareers = [];
-
-  careerData.forEach((entry) => {
-    // Check if at least 1 interest or skill matches
-    const matchedInterests = entry.interests.filter((interest) =>
-      interests.includes(interest.toLowerCase().trim())
-    );
-    const matchedSkills = entry.skills.filter((skill) =>
-      skills.includes(skill.toLowerCase().trim())
-    );
-
-    // Add careers if any matches found
-    if (matchedInterests.length > 0 || matchedSkills.length > 0) {
-      matchedCareers = [...matchedCareers, ...entry.careers];
-    }
-  });
-
-  // Remove duplicates and return unique career recommendations
-  return [...new Set(matchedCareers)];
 };
 
-// Route to get career recommendations
+// Analyze user input and return recommendations
+const getRecommendations = ({
+  skills,
+  interests,
+  workExperience,
+  certifications,
+}) => {
+  const matchedCareers = [];
+  const suggestedCertifications = [];
+
+  for (const career in recommendationsData) {
+    const {
+      skills: requiredSkills,
+      workExperience: requiredExp,
+      certifications: requiredCerts,
+      recommendedCertifications,
+    } = recommendationsData[career];
+
+    const skillsMatch = requiredSkills.some((skill) =>
+      skills.includes(skill.toLowerCase())
+    );
+    const workMatch = requiredExp.some((exp) =>
+      workExperience.includes(exp.toLowerCase())
+    );
+    const certMatch = requiredCerts.some((cert) =>
+      certifications.includes(cert.toLowerCase())
+    );
+
+    // Add career if at least one category matches
+    if (skillsMatch || workMatch || certMatch) {
+      matchedCareers.push(career);
+
+      // Suggest certifications if required ones are not met
+      if (!certMatch) {
+        suggestedCertifications.push({
+          career,
+          certifications: recommendedCertifications,
+        });
+      }
+    }
+  }
+
+  return {
+    careers:
+      matchedCareers.length > 0
+        ? matchedCareers
+        : ["No suitable career recommendations found. Consider enhancing your skills."],
+    suggestedCertifications:
+      suggestedCertifications.length > 0 ? suggestedCertifications : [],
+  };
+};
+
+// Route to get career recommendations and certifications
 router.post("/", (req, res) => {
-  const { interests, skills } = req.body;
+  const {
+    skills = [],
+    interests = [],
+    workExperience = [],
+    certifications = [],
+  } = req.body;
 
-  if (!interests || !skills) {
-    return res.status(400).json({ error: "Interests and skills are required." });
-  }
+  const { careers, suggestedCertifications } = getRecommendations({
+    skills: skills.map((s) => s.toLowerCase().trim()),
+    interests: interests.map((i) => i.toLowerCase().trim()),
+    workExperience: workExperience.map((w) => w.toLowerCase().trim()),
+    certifications: certifications.map((c) => c.toLowerCase().trim()),
+  });
 
-  // Get recommendations
-  const recommendations = getRecommendations(
-    interests.map((i) => i.toLowerCase().trim()),
-    skills.map((s) => s.toLowerCase().trim())
-  );
-
-  if (recommendations.length === 0) {
-    return res.json({
-      recommendations: ["No recommendations found. Try adding more details."],
-    });
-  }
-
-  res.json({ recommendations });
+  res.json({ recommendations: careers, suggestedCertifications });
 });
 
 module.exports = router;

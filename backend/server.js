@@ -1,17 +1,22 @@
 const express = require("express");
 const cors = require("cors");
-const recommendations = require("./routes/recommendations");
-const resumeScreener = require("./routes/resumeScreener");
+const recommendationsRoutes = require("./routes/recommendations");
+const resumeScreenerRoutes = require("./routes/resumeScreener"); // Add this line
 
 const app = express();
+const PORT = 5000;
 
-// Enable CORS
 app.use(cors());
 app.use(express.json());
 
-// API Routes
-app.use("/api/recommendations", recommendations);
-app.use("/api/resume-screener", resumeScreener);
+// Routes
+app.use("/api/recommendations", recommendationsRoutes);
+app.use("/api/resume", resumeScreenerRoutes); // Add this line
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.get("/", (req, res) => {
+  res.send("Career Guidance System Backend is Running!");
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});

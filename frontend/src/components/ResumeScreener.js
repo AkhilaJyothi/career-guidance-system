@@ -1,20 +1,21 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-const ResumeScreener = () => {
+const ResumeScreening = () => {
   const [file, setFile] = useState(null);
-  const [feedback, setFeedback] = useState("");
+  const [recommendations, setRecommendations] = useState([]);
 
-  // Handle file change
+  // Handle file selection
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  // Handle resume upload and send to backend
+  // Submit file for analysis
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!file) {
-      alert("Please upload a resume file.");
+      alert("Please upload a resume first!");
       return;
     }
 
@@ -23,33 +24,41 @@ const ResumeScreener = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/resume-screener",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+        "http://localhost:5000/api/resume/screen",
+        formData
       );
-      setFeedback(response.data.feedback);
+      setRecommendations(response.data.recommendations);
     } catch (error) {
-      console.error("Error uploading resume:", error);
-      setFeedback("Error screening the resume.");
+      console.error("Error screening resume:", error);
+      alert("Error processing the resume.");
     }
   };
 
   return (
     <div>
-      <h3>Resume Screener</h3>
+      <h3>Resume Screening</h3>
       <form onSubmit={handleSubmit}>
-        <input
-          type="file"
-          accept=".pdf, .doc, .docx"
-          onChange={handleFileChange}
-        />
-        <button type="submit">Screen Resume</button>
+        <input type="file" onChange={handleFileChange} accept=".pdf" />
+        <button type="submit">Analyze Resume</button>
       </form>
-      {feedback && <p>{feedback}</p>}
+
+      {recommendations.length > 0 && (
+        <div>
+          <h4>Resume Analysis Results:</h4>
+          <ul>
+            {recommendations.map((rec, index) => (
+              <li key={index}>
+                <strong>Role:</strong> {rec.role} <br />
+                <strong>Matched Keywords:</strong>{" "}
+                {rec.matchedKeywords.join(", ")} <br />
+                <strong>Confidence Score:</strong> {rec.confidenceScore}%
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
 
-export default ResumeScreener;
+export default ResumeScreening;

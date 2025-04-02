@@ -7,8 +7,11 @@ const CareerRecommendations = () => {
     academicPerformance: "",
     interests: "",
     skills: "",
+    workExperience: "", // New field for Work Experience
+    certifications: "", // New field for Certifications
   });
   const [recommendations, setRecommendations] = useState([]);
+  const [suggestedCertifications, setSuggestedCertifications] = useState([]);
 
   // Handle input changes
   const handleChange = (e) => {
@@ -19,33 +22,23 @@ const CareerRecommendations = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const { interests, skills } = formData;
+      const { interests, skills, workExperience, certifications } = formData;
 
-      // ✅ Debugging Logs
-      console.log("Sending data to backend:", {
-        interests: interests.split(","),
-        skills: skills.split(","),
-      });
-
-      // API Request to Backend
+      // Send form data to backend
       const response = await axios.post(
         "http://localhost:5000/api/recommendations",
         {
           interests: interests.split(","),
           skills: skills.split(","),
+          workExperience: workExperience.split(","),
+          certifications: certifications.split(","),
         }
       );
 
-      // ✅ Log API response
-      console.log("API Response:", response.data);
-
       setRecommendations(response.data.recommendations);
+      setSuggestedCertifications(response.data.suggestedCertifications);
     } catch (error) {
-      console.error(
-        "Error getting recommendations:",
-        error.response ? error.response.data : error.message
-      );
-      alert("Error fetching recommendations. Check server logs.");
+      console.error("Error getting recommendations:", error);
     }
   };
 
@@ -77,6 +70,18 @@ const CareerRecommendations = () => {
           placeholder="Skills (comma separated)"
           onChange={handleChange}
         />
+        <input
+          type="text"
+          name="workExperience"
+          placeholder="Work Experience/Internships (comma separated)"
+          onChange={handleChange}
+        />
+        <input
+          type="text"
+          name="certifications"
+          placeholder="Certifications/Courses (comma separated)"
+          onChange={handleChange}
+        />
         <button type="submit">Get Recommendations</button>
       </form>
 
@@ -88,6 +93,22 @@ const CareerRecommendations = () => {
               <li key={index}>{rec}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {suggestedCertifications.length > 0 && (
+        <div>
+          <h4>Recommended Certifications:</h4>
+          {suggestedCertifications.map((certGroup, index) => (
+            <div key={index}>
+              <strong>{certGroup.career}</strong>
+              <ul>
+                {certGroup.certifications.map((cert, i) => (
+                  <li key={i}>{cert}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       )}
     </div>
