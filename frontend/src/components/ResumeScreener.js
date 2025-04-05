@@ -1,64 +1,49 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-const ResumeScreening = () => {
-  const [file, setFile] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
+const ResumeScreener = () => {
+    const [file, setFile] = useState(null);
+    const [result, setResult] = useState(null);
 
-  // Handle file selection
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
+    const handleFileChange = (e) => {
+        setFile(e.target.files[0]);
+    };
 
-  // Submit file for analysis
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const handleSubmit = async () => {
+        if (!file) return alert("Please upload a resume file!");
 
-    if (!file) {
-      alert("Please upload a resume first!");
-      return;
-    }
+        const formData = new FormData();
+        formData.append("resume", file);
 
-    const formData = new FormData();
-    formData.append("resume", file);
+        try {
+            const response = await axios.post("http://localhost:5000/api/resume", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
 
-    try {
-      const response = await axios.post(
-        "http://localhost:5000/api/resume/screen",
-        formData
-      );
-      setRecommendations(response.data.recommendations);
-    } catch (error) {
-      console.error("Error screening resume:", error);
-      alert("Error processing the resume.");
-    }
-  };
+            setResult(response.data);
+        } catch (error) {
+            console.error("Error analyzing resume:", error);
+            alert("Failed to analyze resume. Check backend logs.");
+        }
+    };
 
-  return (
-    <div>
-      <h3>Resume Screening</h3>
-      <form onSubmit={handleSubmit}>
-        <input type="file" onChange={handleFileChange} accept=".pdf" />
-        <button type="submit">Analyze Resume</button>
-      </form>
-
-      {recommendations.length > 0 && (
+    return (
         <div>
-          <h4>Resume Analysis Results:</h4>
-          <ul>
-            {recommendations.map((rec, index) => (
-              <li key={index}>
-                <strong>Role:</strong> {rec.role} <br />
-                <strong>Matched Keywords:</strong>{" "}
-                {rec.matchedKeywords.join(", ")} <br />
-                <strong>Confidence Score:</strong> {rec.confidenceScore}%
-              </li>
-            ))}
-          </ul>
+            <h2>Resume Screening</h2>
+            <input type="file" onChange={handleFileChange} />
+            <button onClick={handleSubmit}>Analyze Resume</button>
+
+            {result && (
+                <div>
+                    <h3>Resume Analysis Results:</h3>
+                    <p><b>Role:</b> {result.role}</p>
+                    <p><b>Matched Skills:</b> {result.matchedSkills.join(", ")}</p>
+                    <p><b>Job Fit Score:</b> {result.jobFitScore}</p>
+                    <p><b>Confidence Score:</b> {result.confidenceScore}</p>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
-export default ResumeScreening;
+export default ResumeScreener;

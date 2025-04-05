@@ -3,77 +3,50 @@ const multer = require("multer");
 const pdfParse = require("pdf-parse");
 
 const router = express.Router();
+const upload = multer();
 
-// Multer setup for uploading resumes
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+// Define roles and required skills
+const rolesData = [
+    { role: "Software Developer", skills: ["Java", "React", "Node.js", "API", "Git"] },
+    { role: "Data Scientist", skills: ["Python", "AI", "Machine Learning", "TensorFlow", "Data Analysis"] },
+    { role: "Web Developer", skills: ["HTML", "CSS", "JavaScript", "React", "Bootstrap"] },
+];
 
-// Sample resume screening rules with job profiles
-const jobProfiles = {
-  "Software Developer": {
-    keywords: ["Java", "React", "Node.js", "API", "Git"],
-    requiredExperience: 1, // Minimum experience in years
-    certifications: ["Full Stack", "Web Development"],
-  },
-  "Data Scientist": {
-    keywords: ["Python", "Machine Learning", "Data Analysis", "AI"],
-    requiredExperience: 1,
-    certifications: ["Data Science", "AI Certification"],
-  },
-  "Cybersecurity Analyst": {
-    keywords: ["Network Security", "Ethical Hacking", "Firewall"],
-    requiredExperience: 1,
-    certifications: ["Cybersecurity", "CEH"],
-  },
-};
+router.post("/", upload.single("resume"), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
 
-// Analyze the extracted text from the resume
-const analyzeResume = (text) => {
-  const resumeData = text.toLowerCase();
-  const recommendations = [];
+        // Extract text from resume
+        const data = await pdfParse(req.file.buffer);
+        const resumeText = data.text.toLowerCase();
 
-  for (const job in jobProfiles) {
-    const { keywords, requiredExperience, certifications } = jobProfiles[job];
-    const matchedKeywords = keywords.filter((word) => resumeData.includes(word.toLowerCase()));
-    const matchedCertifications = certifications.filter((cert) =>
-      resumeData.includes(cert.toLowerCase())
-    );
+        let bestMatch = { role: null, matchedSkills: [], jobFitScore: 0 };
 
-    // Check if enough keywords and certifications match
-    if (matchedKeywords.length >= 2 || matchedCertifications.length >= 1) {
-      recommendations.push({
-        role: job,
-        matchedKeywords,
-        matchedCertifications,
-        confidenceScore: matchedKeywords.length * 10,
-      });
+        rolesData.forEach(({ role, skills }) => {
+            let matchedSkills = skills.filter(skill => resumeText.includes(skill.toLowerCase()));
+            let jobFitScore = (matchedSkills.length / skills.length) * 100;
+
+            if (jobFitScore > bestMatch.jobFitScore) {
+                bestMatch = { role, matchedSkills, jobFitScore };
+            }
+        });
+
+        let confidenceScore = bestMatch.jobFitScore >= 80 ? "High" :
+                              bestMatch.jobFitScore >= 50 ? "Medium" : "Low";
+
+        res.json({
+            role: bestMatch.role || "No Match Found",
+            matchedSkills: bestMatch.matchedSkills,
+            jobFitScore: bestMatch.jobFitScore.toFixed(2) + "%",
+            confidenceScore,
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error analyzing resume" });
     }
-  }
-
-  return recommendations.length > 0
-    ? recommendations
-    : [{ role: "No suitable matches found.", matchedKeywords: [], confidenceScore: 0 }];
-};
-
-// API route to upload and screen resume
-router.post("/screen", upload.single("resume"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No resume file uploaded!" });
-    }
-
-    // Extract text from the uploaded resume
-    const resumeBuffer = req.file.buffer;
-    const data = await pdfParse(resumeBuffer);
-
-    // Analyze the resume content and get recommendations
-    const recommendations = analyzeResume(data.text);
-
-    res.json({ recommendations });
-  } catch (error) {
-    console.error("Error screening resume:", error);
-    res.status(500).json({ error: "Error processing the resume." });
-  }
 });
 
 module.exports = router;
