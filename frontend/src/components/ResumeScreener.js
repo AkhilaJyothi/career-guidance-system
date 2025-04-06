@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import './ResumeScreener.css';
 
 const ResumeScreener = () => {
     const [file, setFile] = useState(null);
